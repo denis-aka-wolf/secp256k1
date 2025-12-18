@@ -41,6 +41,11 @@ void main(List<String> arguments) {
   print('X (hex): $hexX');
   print('Y (hex): $hexY');
   print('Полный несжатый ключ: 04$hexX$hexY');
+  
+  // Вывод координат X и Y в десятичной системе
+  print('\n--- [ДОПОЛНИТЕЛЬНО] Координаты в десятичной системе ---');
+  print('X (dec): ${resultPoint[0]}');
+  print('Y (dec): ${resultPoint[1]}');
 }
 
 /// Скалярное умножение точки на число (Double-and-Add)
