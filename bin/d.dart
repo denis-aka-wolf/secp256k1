@@ -1,99 +1,95 @@
 void main() {
-  final BigInt p = BigInt.parse("115792089237316195423570985008687907853269984665640564039457584007908834671663");
-  final BigInt a = BigInt.zero; // Параметр A для y^2 = x^3 + 7
+  // Параметры поля (p) и параметра кривой (a)
+  final BigInt p = BigInt.parse('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F', radix: 16);
+  final BigInt a = BigInt.zero; 
 
-  // Точка G
-  final Point G = Point(
+  // Точка G (Генератор)
+  final List<BigInt> G = [
     BigInt.parse("55066263022277343669578718895168534326250603453777594175500187360389116729240"),
     BigInt.parse("32670510020758816978083085130507043184471273380659243275938904335757337482424")
-  );
+  ];
 
   // Целевая точка Q
-  final Point Q = Point(
+  final List<BigInt> Q = [
     BigInt.parse("109921230969093388853966210058315145860213412726202766573229810929488554311270"),
     BigInt.parse("114165137965800236389958514164212573551292041563212191306350325126693608044427")
-  );
+  ];
 
-  print("Начинаем обратное преобразование VPA...");
+  print("Начинаем обратное преобразование VPA (версия 2025)...");
   
-  final BigInt b = mod(G.y * G.y - (G.x * G.x * G.x), p);
-  print("Реальный параметр B для этой кривой: $b");
+  // Вычисляем B для проверки: b = (y^2 - x^3) % p
+  BigInt b = (G[1].modPow(BigInt.two, p) - G[0].modPow(BigInt.from(3), p)) % p;
+  if (b < BigInt.zero) b += p;
+  print("Параметр B кривой: $b");
 
   BigInt? d = crackDiscreteLog(G, Q, p, a);
 
   if (d != null) {
-    print("\nУра! Закрытый ключ d найден: $d");
+    print("\n[УСПЕХ] Закрытый ключ d найден: $d");
   } else {
-    print("\nКлюч не найден. Проверьте параметры кривой.");
+    print("\n[ОШИБКА] Ключ не найден в диапазоне 100,000.");
   }
 }
 
-class Point {
-  final BigInt x, y;
-  Point(this.x, this.y);
-}
+/// Твоя корректная функция сложения с нормализацией остатков
+List<BigInt> addPoint(List<BigInt> p1, List<BigInt> p2, BigInt p, BigInt a) {
+  // Обработка точки на бесконечности (если координаты [0, 0])
+  if (p1[0] == BigInt.zero && p1[1] == BigInt.zero) return p2;
+  if (p2[0] == BigInt.zero && p2[1] == BigInt.zero) return p1;
 
-// Правильное взятие остатка для нашей математики (всегда положительное)
-BigInt mod(BigInt n, BigInt m) {
-  BigInt r = n % m;
-  return r < BigInt.zero ? r + m : r;
-}
-
-BigInt modInverse(BigInt n, BigInt m) {
-  BigInt m0 = m, a = n, x0 = BigInt.zero, x1 = BigInt.one;
-  while (a > BigInt.one) {
-    BigInt q = a ~/ m;
-    BigInt t = m;
-    m = a % m;
-    a = t;
-    t = x0;
-    x0 = x1 - q * x0;
-    x1 = t;
-  }
-  return mod(x1, m0);
-}
-
-Point addPoints(Point p1, Point p2, BigInt p, BigInt a) {
+  BigInt x1 = p1[0], y1 = p1[1];
+  BigInt x2 = p2[0], y2 = p2[1];
   BigInt lambda;
-  if (p1.x == p2.x && p1.y == p2.y) {
-    // Удвоение: lambda = (3x^2 + a) / 2y
-    BigInt num = mod(BigInt.from(3) * p1.x * p1.x + a, p);
-    BigInt den = mod(BigInt.from(2) * p1.y, p);
-    lambda = mod(num * modInverse(den, p), p);
-  } else {
-    // Сложение: lambda = (y2 - y1) / (x2 - x1)
-    BigInt num = mod(p2.y - p1.y, p);
-    BigInt den = mod(p2.x - p1.x, p);
-    lambda = mod(num * modInverse(den, p), p);
-  }
 
-  BigInt x3 = mod(lambda * lambda - p1.x - p2.x, p);
-  BigInt y3 = mod(lambda * (p1.x - x3) - p1.y, p);
-  return Point(x3, y3);
+  try {
+    if (x1 == x2 && y1 == y2) {
+      // Удвоение: lambda = (3*x1^2 + a) / (2*y1)
+      BigInt num = (BigInt.from(3) * x1.modPow(BigInt.two, p) + a) % p;
+      BigInt den = (BigInt.two * y1) % p;
+      lambda = (num * den.modInverse(p)) % p;
+    } else {
+      // Сложение: lambda = (y2 - y1) / (x2 - x1)
+      BigInt num = (y2 - y1) % p;
+      BigInt den = (x2 - x1) % p;
+      lambda = (num * den.modInverse(p)) % p;
+    }
+
+    BigInt x3 = (lambda.modPow(BigInt.two, p) - x1 - x2) % p;
+    BigInt y3 = (lambda * (x1 - x3) - y1) % p;
+
+    // Нормализация: Dart возвращает отрицательный остаток для отрицательных чисел
+    return [
+      x3 < BigInt.zero ? x3 + p : x3, 
+      y3 < BigInt.zero ? y3 + p : y3
+    ];
+  } catch (e) {
+    // Если den.modInverse(p) невозможен (GCD(den, p) != 1) или y=0
+    return [BigInt.zero, BigInt.zero];
+  }
 }
 
-BigInt? crackDiscreteLog(Point G, Point target, BigInt p, BigInt a) {
-  Point currentPoint = G;
-  // Мы будем проверять и Y и -Y (симметрию кривой)
-  for (int d = 1; d <= 30000; d++) {
-    // Проверка совпадения X
-    if (currentPoint.x == target.x) {
-      if (currentPoint.y == target.y) {
-        return BigInt.from(d);
-      } else {
-        // Если X совпал, а Y нет — значит ключ d это (Order - d)
-        // или мы нашли отрицательную версию точки
-        print("Найдено совпадение по X на шаге $d, но Y зеркален!");
-        return BigInt.from(d); 
-      }
+/// Функция поиска d (дискретный логарифм перебором)
+BigInt? crackDiscreteLog(List<BigInt> G, List<BigInt> target, BigInt p, BigInt a) {
+  List<BigInt> currentPoint = G; // Это d = 1
+
+  for (int d = 1; d <= 100000; d++) {
+    // Проверка совпадения
+    if (currentPoint[0] == target[0] && currentPoint[1] == target[1]) {
+      return BigInt.from(d);
     }
-    
-    currentPoint = addPoints(currentPoint, G, p, a);
-    
-    if (d % 5000 == 0) {
-      print("Шаг $d... X: ${currentPoint.x.toString().substring(0, 8)}...");
+
+    // Итерация сложения: d*G + G
+    currentPoint = addPoint(currentPoint, G, p, a);
+
+    if (d % 10000 == 0) {
+      print("Проверено $d итераций...");
+    }
+
+    // Защита от зацикливания в точке на бесконечности
+    if (currentPoint[0] == BigInt.zero && currentPoint[1] == BigInt.zero) {
+      print("Точка ушла в бесконечность на шаге $d.");
+      break;
     }
   }
   return null;
 }
-
