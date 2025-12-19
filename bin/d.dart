@@ -1,17 +1,16 @@
+import 'package:cli/secp256k1.dart';
+
 void main() {
-  // 1. Модуль P для кривой secp256k1
-  final BigInt p = BigInt.parse('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F', radix: 16);
-  final BigInt a = BigInt.zero; 
+  // Используем константы из библиотеки
+  final BigInt p = Secp256k1Constants.p;
+  final BigInt a = Secp256k1Constants.a;
 
   // Точка G (Генератор)
-  final List<BigInt> G = [
-    BigInt.parse("55066263022277343669578718895168534326250603453777594175500187360389116729240"),
-    BigInt.parse("32670510020758816978083085130507043184471273380659243275938904335757337482424")
-  ];
+  final List<BigInt> G = Secp256k1Constants.G;
 
   // Целевая точка Q
   final List<BigInt> Q = [
-    BigInt.parse("69874757311306172767032656227267399159598975785131679881629970068417157508982"),
+    BigInt.parse("6987475731130617276703265622726739915959897578513167988162997068417157508982"),
     BigInt.parse("82307116114001638795922891179745376142088021306855438143719624270381202173533")
   ];
 
@@ -21,7 +20,7 @@ void main() {
   BigInt bG = (G[1].modPow(BigInt.two, p) - (G[0].modPow(BigInt.from(3), p) + a * G[0])) % p;
   if (bG < BigInt.zero) bG += p;
 
-  BigInt bQ = (Q[1].modPow(BigInt.two, p) - (Q[0].modPow(BigInt.from(3), p) + a * Q[0])) % p;
+ BigInt bQ = (Q[1].modPow(BigInt.two, p) - (Q[0].modPow(BigInt.from(3), p) + a * Q[0])) % p;
   if (bQ < BigInt.zero) bQ += p;
 
   print("b для точки G: $bG");
@@ -79,14 +78,14 @@ List<BigInt> addPoint(List<BigInt> p1, List<BigInt> p2, BigInt p, BigInt a) {
 BigInt? crackDiscreteLog(List<BigInt> G, List<BigInt> target, BigInt p, BigInt a) {
   List<BigInt> currentPoint = List.from(G);
 
-  for (int d = 1; d <= 1000000000000000; d++) {
+  for (int d = 1; d <= 1000000000; d++) {
     if (currentPoint[0] == target[0] && currentPoint[1] == target[1]) {
       return BigInt.from(d);
     }
 
     currentPoint = addPoint(currentPoint, G, p, a);
 
-    if (d % 100000 == 0) {
+    if (d % 10000 == 0) {
       print("Шаг $d...");
     }
 
