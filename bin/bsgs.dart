@@ -64,7 +64,7 @@ void main(List<String> arguments) async {
         BigInt foundX = bytesToBigInt(pointBytes);
 
         if (foundX == currentGiant[0]) {
-          BigInt finalD = BigInt.from(j) * BigInt.from(m) + BigInt.from(pos + k);
+          BigInt finalD = BigInt.from(j) * BigInt.from(m) + BigInt.from(pos + k) + BigInt.one;
           print("\n[УСПЕХ] Ключ d найден: $finalD");
           await file.close();
           return;
