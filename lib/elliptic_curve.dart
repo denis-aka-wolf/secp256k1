@@ -1,8 +1,6 @@
 /// Математические операции для эллиптической кривой secp256k1
 library elliptic_curve;
 
-import 'dart:typed_data';
-
 /// Скалярное умножение точки на число (Double-and-Add)
 List<BigInt>? scalarMultiply(List<BigInt> point, BigInt scalar, BigInt p, BigInt a) {
   List<BigInt>? result;
@@ -148,6 +146,7 @@ BigInt? modularSqrt(BigInt n, BigInt p) {
 
   while (t != BigInt.zero && t != BigInt.one) {
     BigInt i = BigInt.zero;
+    // ignore: non_constant_identifier_names
     BigInt t_pow = t;
     while (t_pow != BigInt.one) {
       t_pow = t_pow.modPow(BigInt.two, p);
