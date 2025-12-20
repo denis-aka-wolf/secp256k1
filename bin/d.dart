@@ -133,7 +133,7 @@ BigInt? crackDiscreteLog(
 ) {
   List<BigInt> currentPoint = List.from(G);
 
-  for (int d = 1; d <= 1000000; d++) {
+  for (int d = 1; d <= 10000000; d++) {
     if (currentPoint[0] == target[0] && currentPoint[1] == target[1]) {
       return BigInt.from(d);
     }
