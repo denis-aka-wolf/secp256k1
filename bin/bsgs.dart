@@ -9,24 +9,55 @@ void main(List<String> arguments) async {
   final BigInt a = Secp256k1Constants.a;
   final List<BigInt> G = Secp256k1Constants.G;
   
-  // Проверяем, что переданы аргументы для точки Q
-  if (arguments.length < 2) {
-    print('Использование: dart run bin/bsgs.dart <Qx> <Qy> [fileName] [m]');
-    print('Где Qx и Qy - координаты целевой точки Q в hex формате');
+  // Парсинг именованных аргументов
+  BigInt? startX, endX, qX, qY;
+  String fileName = "data/baby_steps.bin";
+  int m = 1000;
+  
+  for (int i = 0; i < arguments.length; i++) {
+    if (arguments[i] == '--start' && i + 1 < arguments.length) {
+      startX = BigInt.parse(arguments[++i], radix: 16);
+    } else if (arguments[i] == '--end' && i + 1 < arguments.length) {
+      endX = BigInt.parse(arguments[++i], radix: 16);
+    } else if (arguments[i] == '--x' && i + 1 < arguments.length) {
+      qX = BigInt.parse(arguments[++i], radix: 16);
+    } else if (arguments[i] == '--y' && i + 1 < arguments.length) {
+      qY = BigInt.parse(arguments[++i], radix: 16);
+    } else if (arguments[i] == '--file' && i + 1 < arguments.length) {
+      fileName = arguments[++i];
+    } else if (arguments[i] == '--m' && i + 1 < arguments.length) {
+      m = int.parse(arguments[++i]);
+    } else if (arguments[i].startsWith('--')) {
+      print('Неизвестный параметр: ${arguments[i]}');
+      print('Использование: dart run bin/bsgs.dart --x <Qx> --y <Qy> [--start <start>] [--end <end>] [--file <fileName>] [--m <m>]');
+      return;
+    }
+  }
+  
+  // Проверяем, что обязательные параметры x и y заданы
+  if (qX == null || qY == null) {
+    print('Обязательные параметры --x и --y не заданы');
+    print('Использование: dart run bin/bsgs.dart --x <Qx> --y <Qy> [--start <start>] [--end <end>] [--file <fileName>] [--m <m>]');
     return;
   }
   
   // Целевая точка Q из аргументов командной строки
-  final List<BigInt> Q = [
-    BigInt.parse(arguments[0], radix: 16),
-    BigInt.parse(arguments[1], radix: 16)
-  ];
+  final List<BigInt> Q = [qX!, qY!];
   
-  final String fileName = arguments.length > 2 ? arguments[2] : "data/baby_steps.bin";
-  final int m = arguments.length > 3 ? int.parse(arguments[3]) : 1000;
+  // Если заданы start и/или end, вычисляем соответствующие значения m
+  if (startX != null || endX != null) {
+    BigInt start = startX ?? BigInt.zero;
+    BigInt end = endX ?? (BigInt.from(m) * BigInt.from(m)); // по умолчанию до m^2
+    
+    // Обновляем m так, чтобы охватить нужный диапазон
+    BigInt range = end - start;
+    BigInt sqrtRange = sqrtBigInt(range ~/ BigInt.from(2));
+        
+    m = max(m, sqrtRange.toInt());
+  }
 
   print("=== Система VPA: Дисковый BSGS (2025, оптимизированный) ===");
-
+  print("Диапазон поиска: ${startX?.toRadixString(16) ?? '0'} - ${endX?.toRadixString(16) ?? (BigInt.from(m) * BigInt.from(m)).toRadixString(16)}");
 
   // 1. Генерация baby-steps
   if (!File(fileName).existsSync() || !isValidFileSize(fileName, m)) {
@@ -50,7 +81,11 @@ void main(List<String> arguments) async {
   List<BigInt> currentGiant = List.from(Q);
   final file = await File(fileName).open();
 
-  for (int j = 0; j <= m; j++) {
+  // Определяем начальный и конечный индекс для поиска
+  BigInt startIndex = startX != null ? startX ~/ BigInt.from(m) : BigInt.zero;
+  BigInt endIndex = endX != null ? endX ~/ BigInt.from(m) : BigInt.from(m);
+
+  for (BigInt j = startIndex; j <= endIndex && j <= BigInt.from(m); j = j + BigInt.one) {
     BigInt prefix = get80bitPrefix(currentGiant[0]);
 
     if (index.containsKey(prefix)) {
@@ -64,17 +99,22 @@ void main(List<String> arguments) async {
         BigInt foundX = bytesToBigInt(pointBytes);
 
         if (foundX == currentGiant[0]) {
-          BigInt finalD = BigInt.from(j) * BigInt.from(m) + BigInt.from(pos + k) + BigInt.one;
-          print("\n[УСПЕХ] Ключ d найден: $finalD");
-          await file.close();
-          return;
+          BigInt finalD = j * BigInt.from(m) + BigInt.from(pos + k) + BigInt.one;
+          
+          // Проверяем, находится ли результат в заданном диапазоне
+          if ((startX == null || finalD >= startX) && (endX == null || finalD <= endX)) {
+            print("\n[УСПЕХ] Ключ d найден: ${finalD.toRadixString(16)} (${finalD})");
+            await file.close();
+            return;
+          }
         }
       }
     }
 
     currentGiant = addPoint(currentGiant, negMG, p, a);
-    if (j % 10000 == 0 && j > 0) {
-      print("Проверено гигантских шагов: $j (Диапазон: ${BigInt.from(j) * BigInt.from(m)})");
+    int jValue = j.toInt();
+    if (jValue % 10000 == 0 && jValue > 0) {
+      print("Проверено гигантских шагов: $jValue (Диапазон: ${BigInt.from(jValue) * BigInt.from(m)})");
     }
   }
 
@@ -224,4 +264,20 @@ bool isValidFileSize(String fileName, int m) {
   } catch (e) {
     return false;
  }
+}
+
+// Функция для вычисления квадратного корня из BigInt
+BigInt sqrtBigInt(BigInt n) {
+  if (n < BigInt.zero) throw ArgumentError('Квадратный корень из отрицательного числа');
+  if (n == BigInt.zero) return BigInt.zero;
+  
+  BigInt x = n;
+  BigInt y = (x + BigInt.one) ~/ BigInt.two;
+  
+  while (y < x) {
+    x = y;
+    y = (x + (n ~/ x)) ~/ BigInt.two;
+  }
+  
+  return x;
 }

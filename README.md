@@ -29,19 +29,28 @@ dart run bin/cli.dart 23288
 ### Решение задачи дискретного логарифмирования с помощью BSGS
 
 ```bash
-dart run bin/bsgs.dart <Qx> <Qy> [fileName] [m]
+dart run bin/bsgs.dart --x <Qx> --y <Qy> [--start <start>] [--end <end>] [--file <fileName>] [--m <m>]
 ```
 
 Где:
 
-- `<Qx>` и `<Qy>` - координаты целевой точки Q в hex формате
-- `[fileName]` - имя файла с baby-steps (по умолчанию "data/baby_steps.bin")
-- `[m]` - размер подмассива (по умолчанию 1000)
+- `--x <Qx>` и `--y <Qy>` - **обязательные** параметры: координаты целевой точки Q в hex формате
+- `--start <start>` - начало диапазона поиска (в hex формате, опционально)
+- `--end <end>` - окончание диапазона поиска (в hex формате, опционально)
+- `--file <fileName>` - имя файла с baby-steps (по умолчанию "data/baby_steps.bin")
+- `--m <m>` - размер подмассива (по умолчанию 1000)
 
-Пример:
+Примеры:
 
 ```bash
-dart run bin/bsgs.dart 39137f8a6ce2fdc692cc7ed51740544fa326171dee387630f6a616009714828f 23cb2af1cf2c168d612bae86b75871265062bccdabc338ae25f3d3a1605bd783
+# Поиск с указанием только целевой точки
+dart run bin/bsgs.dart --x 39137f8a6ce2fdc692cc7ed51740544fa326171dee387630f6a616009714828f --y 23cb2af1cf2c168d612bae86b75871265062bccdabc338ae25f3d3a1605bd783
+
+# Поиск в заданном диапазоне
+dart run bin/bsgs.dart --x 39137f8a6ce2fdc692cc7ed51740544fa326171dee387630f6a616009714828f --y 23cb2af1cf2c168d612bae86b75871265062bccdabc338ae25f3d3a1605bd783 --start 10000 --end 20000
+
+# Поиск с указанием файла и размера подмассива
+dart run bin/bsgs.dart --x 39137f8a6ce2fdc692cc7ed51740544fa326171dee387630f6a616009714828f --y 23cb2af1cf2c168d612bae86b75871265062bccdabc338ae25f3d3a1605bd783 --file my_baby_steps.bin --m 2000
 ```
 
 ### Поиск закрытого ключа по координате Qx с вычислением Qy
