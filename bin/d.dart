@@ -39,8 +39,11 @@ void main(List<String> arguments) {
       // Проверяем, является ли входное значение числом
       int radix = 10;
       
-      // Проверяем, содержит ли строка только допустимые шестнадцатеричные символы
-      if (input.contains(RegExp(r'^[0-9A-Fa-f]+$'))) {
+      // Проверяем, содержит ли строка только цифры (десятичное число)
+      if (input.contains(RegExp(r'^[0-9]+$'))) {
+        radix = 10;
+      } else if (input.contains(RegExp(r'^[0-9A-Fa-f]+$'))) {
+        // Если содержит только шестнадцатеричные символы
         try {
           BigInt.parse(input, radix: 16);
           radix = 16;

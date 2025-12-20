@@ -25,8 +25,8 @@ List<Map<String, dynamic>> generatePublicKeyRange(
         'public_key': {
           'x': hexX,
           'y': hexY,
-          'compressed': '02' + hexX, // Если y четный, иначе '03'
-          'uncompressed': '04' + hexX + hexY,
+          'compressed': '02$hexX', // Если y четный, иначе '03'
+          'uncompressed': '04$hexX$hexY',
         },
         'decimal': {
           'x': publicKey[0].toString(),

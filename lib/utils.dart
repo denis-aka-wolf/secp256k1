@@ -1,7 +1,6 @@
 /// Вспомогательные утилиты для работы с эллиптической кривой secp256k1
-library utils;
+library;
 
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 

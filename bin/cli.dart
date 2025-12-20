@@ -4,7 +4,6 @@ void main(List<String> arguments) {
   // Используем константы из библиотеки
   final BigInt p = Secp256k1Constants.p;
   final BigInt a = Secp256k1Constants.a;
-  final BigInt b = Secp256k1Constants.b;
   final List<BigInt> G = Secp256k1Constants.G;
   
   final BigInt gx = G[0];

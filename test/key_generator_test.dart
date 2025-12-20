@@ -8,7 +8,6 @@ void main() {
     // Константы кривой secp256k1
     final BigInt p = Secp256k1Constants.p;
     final BigInt a = Secp256k1Constants.a;
-    final BigInt b = Secp256k1Constants.b;
     
     // Базовая точка G
     final List<BigInt> G = Secp256k1Constants.G;

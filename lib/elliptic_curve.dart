@@ -1,5 +1,5 @@
 /// Математические операции для эллиптической кривой secp256k1
-library elliptic_curve;
+library;
 
 /// Скалярное умножение точки на число (Double-and-Add)
 List<BigInt>? scalarMultiply(List<BigInt> point, BigInt scalar, BigInt p, BigInt a) {
@@ -10,10 +10,10 @@ List<BigInt>? scalarMultiply(List<BigInt> point, BigInt scalar, BigInt p, BigInt
 
   for (int i = binary.length - 1; i >= 0; i--) {
     if (binary[i] == '1') {
-      result = (result == null) ? addend : addPoint(result!, addend!, p, a);
+      result = (result == null) ? addend : addPoint(result, addend!, p, a);
     }
     if (i > 0) {
-      addend = addPoint(addend!, addend!, p, a); // Удвоение точки
+      addend = addPoint(addend!, addend, p, a); // Удвоение точки
     }
   }
   return result;
