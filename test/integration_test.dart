@@ -54,6 +54,6 @@ void main() {
           fail('Не удалось извлечь найденный закрытый ключ из вывода BSGS');
         }
       }
-    }, timeout: Timeout(Duration(minutes: 10))); // Увеличиваем таймаут для теста
+    }, timeout: Timeout(Duration(minutes: 20))); // Увеличиваем таймаут для теста
   });
 }

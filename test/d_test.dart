@@ -6,9 +6,9 @@ import 'package:cli/secp256k1.dart';
 void main() {
   group('Тестирование d.dart', () {
     test('Проверка корректности выполнения скрипта d.dart', () async {
-      // Запуск скрипта d.dart и захват вывода
+      // Запуск скрипта d.dart с аргументом и захват вывода
       // Устанавливаем короткий таймаут, так как скрипт может работать долго
-      final process = await Process.start('dart', ['bin/d.dart']);
+      final process = await Process.start('dart', ['bin/d.dart', '424474cde218c2a7600156687eea9f0f90ab0424a088da0d27d92040c520e8db']);
       
       // Ждем 5 секунд, затем завершаем процесс
       await Future.delayed(Duration(seconds: 5));
