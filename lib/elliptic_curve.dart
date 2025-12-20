@@ -114,3 +114,71 @@ BigInt modInverseOptimized(BigInt a, BigInt m) {
   if (x1 < BigInt.zero) x1 += m0;
   return x1;
 }
+
+/// Вычисление квадратного корня по модулю p (для простого p)
+BigInt? modularSqrt(BigInt n, BigInt p) {
+  // Проверяем, является ли n квадратичным остатком по модулю p
+  BigInt legendre = n.modPow((p - BigInt.one) ~/ BigInt.two, p);
+  if (legendre != BigInt.one) {
+    return null; // n не является квадратичным остатком
+  }
+
+  // Алгоритм Тонелли-Шенкса для вычисления квадратного корня
+  if (p % BigInt.from(4) == BigInt.from(3)) {
+    return n.modPow((p + BigInt.one) ~/ BigInt.from(4), p);
+  }
+
+  // Для других случаев используем общий алгоритм (упрощенная версия)
+  BigInt s = p - BigInt.one;
+  int r = 0;
+  while (s.isEven) {
+    s = s ~/ BigInt.two;
+    r++;
+  }
+
+  BigInt z = BigInt.two;
+  while (z.modPow((p - BigInt.one) ~/ BigInt.two, p) == BigInt.one) {
+    z = z + BigInt.one;
+  }
+
+  BigInt m = BigInt.from(r);
+  BigInt c = z.modPow(s, p);
+  BigInt t = n.modPow(s, p);
+  BigInt result = n.modPow((s + BigInt.one) ~/ BigInt.two, p);
+
+  while (t != BigInt.zero && t != BigInt.one) {
+    BigInt i = BigInt.zero;
+    BigInt t_pow = t;
+    while (t_pow != BigInt.one) {
+      t_pow = t_pow.modPow(BigInt.two, p);
+      i = i + BigInt.one;
+    }
+
+    if (i == m) {
+      return null; // Не удалось найти квадратный корень
+    }
+
+    BigInt b = c.modPow(BigInt.two.modPow(m - i - BigInt.one, p - BigInt.one), p);
+    m = i;
+    c = b.modPow(BigInt.two, p);
+    t = (t * c) % p;
+    result = (result * b) % p;
+  }
+
+  return result;
+}
+
+/// Вычисление координаты Y по X на эллиптической кривой y^2 = x^3 + ax + b
+List<BigInt>? getYCoordinate(BigInt x, BigInt p, BigInt a, BigInt b) {
+  // y^2 = x^3 + ax + b
+  BigInt rightSide = (x.modPow(BigInt.from(3), p) + a * x + b) % p;
+  
+  BigInt? y = modularSqrt(rightSide, p);
+  if (y == null) {
+    return null; // Не существует точки с такой координатой X
+  }
+
+  // Возвращаем обе возможные координаты Y: y и p-y
+  BigInt y2 = (p - y) % p;
+  return [y, y2];
+}
