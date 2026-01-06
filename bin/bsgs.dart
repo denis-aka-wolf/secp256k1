@@ -16,9 +16,19 @@ void main(List<String> arguments) async {
   
   for (int i = 0; i < arguments.length; i++) {
     if (arguments[i] == '--start' && i + 1 < arguments.length) {
-      startX = BigInt.parse(arguments[++i], radix: 16);
+      String startStr = arguments[++i];
+      if (startStr.startsWith('0x') || startStr.startsWith('0X')) {
+        startX = BigInt.parse(startStr.substring(2), radix: 16);
+      } else {
+        startX = BigInt.parse(startStr, radix: 10);
+      }
     } else if (arguments[i] == '--end' && i + 1 < arguments.length) {
-      endX = BigInt.parse(arguments[++i], radix: 16);
+      String endStr = arguments[++i];
+      if (endStr.startsWith('0x') || endStr.startsWith('0X')) {
+        endX = BigInt.parse(endStr.substring(2), radix: 16);
+      } else {
+        endX = BigInt.parse(endStr, radix: 10);
+      }
     } else if (arguments[i] == '--x' && i + 1 < arguments.length) {
       qX = BigInt.parse(arguments[++i], radix: 16);
     } else if (arguments[i] == '--y' && i + 1 < arguments.length) {
@@ -51,7 +61,7 @@ void main(List<String> arguments) async {
     
     // Обновляем m так, чтобы охватить нужный диапазон
     BigInt range = end - start;
-    BigInt sqrtRange = sqrtBigInt(range ~/ BigInt.from(2));
+    BigInt sqrtRange = sqrtBigInt(range);
         
     m = max(m, sqrtRange.toInt());
   }
@@ -83,7 +93,11 @@ void main(List<String> arguments) async {
 
   // Определяем начальный и конечный индекс для поиска
   BigInt startIndex = startX != null ? startX ~/ BigInt.from(m) : BigInt.zero;
-  BigInt endIndex = endX != null ? endX ~/ BigInt.from(m) : BigInt.from(m);
+  BigInt endIndex = endX != null ? (endX ~/ BigInt.from(m)) + BigInt.one : BigInt.from(m);
+
+  // Убедимся, что endIndex не превышает максимально возможное значение j
+  BigInt maxPossibleJ = (endX != null ? endX : BigInt.from(m) * BigInt.from(m)) ~/ BigInt.from(m);
+  endIndex = endIndex.compareTo(maxPossibleJ + BigInt.one) > 0 ? maxPossibleJ + BigInt.one : endIndex;
 
   for (BigInt j = startIndex; j <= endIndex && j <= BigInt.from(m); j = j + BigInt.one) {
     BigInt prefix = get80bitPrefix(currentGiant[0]);
@@ -91,7 +105,7 @@ void main(List<String> arguments) async {
     if (index.containsKey(prefix)) {
       int pos = index[prefix]!;
       await file.setPosition(pos * 32);
-      Uint8List block = await file.read(32 * 1000); // Читаем блок 1000 точек
+      Uint8List block = await file.read(32 * 100); // Читаем блок 1000 точек
 
       for (int k = 0; k < 1000; k++) {
         if (pos + k >= m) break;
@@ -99,13 +113,17 @@ void main(List<String> arguments) async {
         BigInt foundX = bytesToBigInt(pointBytes);
 
         if (foundX == currentGiant[0]) {
-          BigInt finalD = j * BigInt.from(m) + BigInt.from(pos + k) + BigInt.one;
-          
-          // Проверяем, находится ли результат в заданном диапазоне
-          if ((startX == null || finalD >= startX) && (endX == null || finalD <= endX)) {
-            print("\n[УСПЕХ] Ключ d найден: ${finalD.toRadixString(16)} (${finalD})");
-            await file.close();
-            return;
+          // Для дополнительной проверки, вычисляем Y координату точки из файла
+          List<BigInt>? possibleYs = getYCoordinate(foundX, p, a, Secp256k1Constants.b);
+          if (possibleYs != null && (currentGiant[1] == possibleYs[0] || currentGiant[1] == possibleYs[1])) {
+            BigInt finalD = j * BigInt.from(m) + BigInt.from(pos + k + 1);
+            
+            // Проверяем, находится ли результат в заданном диапазоне
+            if ((startX == null || finalD >= startX) && (endX == null || finalD <= endX)) {
+              print("\n[УСПЕХ] Ключ d найден: ${finalD.toRadixString(16)} (${finalD})");
+              await file.close();
+              return;
+            }
           }
         }
       }
